@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JLPT N5 Grammar Flashcards</title>
+    <style>
+        :root {
+            --primary: #ef4444; 
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --example-bg: #f1f5f9;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            width: 90%;
+            max-width: 400px;
+            perspective: 1000px;
+        }
+        .card {
+            width: 100%;
+            height: 550px; 
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 20px;
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            box-sizing: border-box;
+            border-radius: 20px;
+            background: var(--card-bg);
+            text-align: center;
+        }
+        .card-face-back {
+            transform: rotateY(180deg);
+            text-align: left;
+            justify-content: flex-start;
+            overflow-y: auto;
+            background: var(--card-bg);
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        
+        /* Front Content */
+        .pattern-name {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        .explanation {
+            font-size: 1.1rem;
+            color: #475569;
+            line-height: 1.5;
+            padding: 0 10px;
+        }
+
+        /* Back Content */
+        .example-container {
+            width: 100%;
+            margin-bottom: 12px;
+            background: var(--example-bg);
+            padding: 12px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            box-sizing: border-box;
+        }
+        .example-jp {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+        .example-en {
+            font-size: 0.9rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            background: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            touch-action: manipulation;
+        }
+        button:active {
+            background: #b91c1c;
+        }
+        .progress {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        .hint {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 20px;
+            position: absolute;
+            bottom: 20px;
+        }
+
+        /* --- Editing and Adding UI --- */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            cursor: pointer;
+            z-index: 100;
+            padding: 0;
+        }
+        .action-btns {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            background: #e2e8f0;
+            color: #334155;
+            border-radius: 8px;
+        }
+        .btn-save-edit {
+            background: #10b981; 
+            color: white;
+            display: none;
+        }
+        
+        .edit-fields {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .edit-fields textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-family: inherit;
+            resize: none;
+            box-sizing: border-box;
+            height: 40px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h3 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .modal textarea {
+            height: 40px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .modal-actions button.btn-cancel {
+            background: #e2e8f0;
+            color: #334155;
+        }
+        .modal-actions button.btn-confirm {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress" id="progress">1 / 40</div>
+
+    <div class="container" id="swipe-container">
+        <div class="card" id="card">
+            <div class="card-face card-face-front">
+                <div class="pattern-name" id="pattern-name">Loading...</div>
+                <div class="explanation" id="explanation"></div>
+                <div class="hint">Tap to see examples</div>
+            </div>
+            
+            <div class="card-face card-face-back">
+                <div id="examples-display" style="width: 100%;">
+                    <div class="example-container"><div class="example-jp" id="ex1-jp">Loading...</div><div class="example-en" id="ex1-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex2-jp">Loading...</div><div class="example-en" id="ex2-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex3-jp">Loading...</div><div class="example-en" id="ex3-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex4-jp">Loading...</div><div class="example-en" id="ex4-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex5-jp">Loading...</div><div class="example-en" id="ex5-en"></div></div>
+                </div>
+
+                <div class="edit-fields" id="edit-fields">
+                    <textarea id="edit-ex1-jp" placeholder="Ex 1 (JP)"></textarea><textarea id="edit-ex1-en" placeholder="Ex 1 (EN)"></textarea>
+                    <textarea id="edit-ex2-jp" placeholder="Ex 2 (JP)"></textarea><textarea id="edit-ex2-en" placeholder="Ex 2 (EN)"></textarea>
+                    <textarea id="edit-ex3-jp" placeholder="Ex 3 (JP)"></textarea><textarea id="edit-ex3-en" placeholder="Ex 3 (EN)"></textarea>
+                    <textarea id="edit-ex4-jp" placeholder="Ex 4 (JP)"></textarea><textarea id="edit-ex4-en" placeholder="Ex 4 (EN)"></textarea>
+                    <textarea id="edit-ex5-jp" placeholder="Ex 5 (JP)"></textarea><textarea id="edit-ex5-en" placeholder="Ex 5 (EN)"></textarea>
+                </div>
+                
+                <div class="action-btns">
+                    <button class="btn-small" id="btn-edit">Edit Examples</button>
+                    <button class="btn-small btn-save-edit" id="btn-save-edit">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="btn-prev">Prev</button>
+        <button id="btn-next">Next</button>
+    </div>
+
+    <button class="fab" id="btn-add-card">+</button>
+
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal">
+            <h3>Add N5 Grammar</h3>
+            <input type="text" id="new-pattern" placeholder="Pattern (e.g. 〜から)">
+            <textarea id="new-explanation" placeholder="Explanation..."></textarea>
+            <textarea id="new-ex1" placeholder="Ex 1: JP - EN"></textarea>
+            <textarea id="new-ex2" placeholder="Ex 2: JP - EN"></textarea>
+            <textarea id="new-ex3" placeholder="Ex 3: JP - EN"></textarea>
+            <textarea id="new-ex4" placeholder="Ex 4: JP - EN"></textarea>
+            <textarea id="new-ex5" placeholder="Ex 5: JP - EN"></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="btn-cancel-add">Cancel</button>
+                <button class="btn-confirm" id="btn-confirm-add">Save Card</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            const defaultData = [
+                { pat: "〜は (wa)", exp: "Topic marker. Indicates the topic of the sentence.", ex1jp: "私は学生です。", ex1en: "I am a student.", ex2jp: "今日は月曜日です。", ex2en: "Today is Monday.", ex3jp: "父は先生です。", ex3en: "My father is a teacher.", ex4jp: "これは私の本です。", ex4en: "This is my book.", ex5jp: "田中さんは会社員です。", ex5en: "Mr. Tanaka is an office worker." },
+                { pat: "〜が (ga)", exp: "Subject marker. Emphasizes the subject or introduces new information.", ex1jp: "雨が降っています。", ex1en: "It is raining.", ex2jp: "私がやります。", ex2en: "I will do it.", ex3jp: "車があります。", ex3en: "There is a car.", ex4jp: "犬が好きです。", ex4en: "I like dogs.", ex5jp: "誰が来ますか。", ex5en: "Who will come?" },
+                { pat: "〜を (wo)", exp: "Direct object marker. Indicates the receiver of an action.", ex1jp: "水を飲みます。", ex1en: "I drink water.", ex2jp: "本を読みます。", ex2en: "I read a book.", ex3jp: "手紙を書きます。", ex3en: "I write a letter.", ex4jp: "ご飯を食べます。", ex4en: "I eat a meal.", ex5jp: "テレビを見ます。", ex5en: "I watch TV." },
+                { pat: "〜に (ni)", exp: "Indicates time, destination, or existence location.", ex1jp: "日本に行きます。", ex1en: "I will go to Japan.", ex2jp: "七時に起きます。", ex2en: "I wake up at seven o'clock.", ex3jp: "右に曲がります。", ex3en: "Turn to the right.", ex4jp: "東京に住んでいます。", ex4en: "I live in Tokyo.", ex5jp: "先生に聞きます。", ex5en: "I will ask the teacher." },
+                { pat: "〜で (de)", exp: "Indicates the location of an action or the means/tool used.", ex1jp: "電車で行きます。", ex1en: "I go by train.", ex2jp: "会社で働きます。", ex2en: "I work at the company.", ex3jp: "日本語で話します。", ex3en: "I speak in Japanese.", ex4jp: "鉛筆で書きます。", ex4en: "I write with a pencil.", ex5jp: "レストランで食べます。", ex5en: "I eat at a restaurant." },
+                { pat: "〜へ (e)", exp: "Direction marker. Indicates movement toward a place.", ex1jp: "学校へ行きます。", ex1en: "I am going to school.", ex2jp: "家へ帰ります。", ex2en: "I will return home.", ex3jp: "北へ向かいます。", ex3en: "I head to the north.", ex4jp: "会社へ来ました。", ex4en: "I came to the company.", ex5jp: "どこへ行きますか。", ex5en: "Where are you going?" },
+                { pat: "〜と (to)", exp: "Means 'and' (exhaustive list) or 'with' someone.", ex1jp: "魚と肉を買いました。", ex1en: "I bought fish and meat.", ex2jp: "友だちと映画を見ます。", ex2en: "I watch a movie with a friend.", ex3jp: "母と話します。", ex3en: "I speak with my mother.", ex4jp: "これとあれをください。", ex4en: "Please give me this and that.", ex5jp: "兄と弟がいます。", ex5en: "I have an older brother and a younger brother." },
+                { pat: "〜も (mo)", exp: "Means 'also' or 'too'. Replaces は, が, or を.", ex1jp: "私も行きます。", ex1en: "I will go too.", ex2jp: "これもお茶です。", ex2en: "This is also tea.", ex3jp: "本も買いました。", ex3en: "I bought a book too.", ex4jp: "昨日も雨でした。", ex4en: "It was raining yesterday too.", ex5jp: "誰もいません。", ex5en: "No one is here." },
+                { pat: "〜の (no)", exp: "Possessive marker. Connects two nouns (Noun 1's Noun 2).", ex1jp: "私の本です。", ex1en: "It is my book.", ex2jp: "大学の先生です。", ex2en: "A university teacher.", ex3jp: "車の鍵です。", ex3en: "The car's key.", ex4jp: "日本のカメラです。", ex4en: "A Japanese camera.", ex5jp: "昨日の新聞です。", ex5en: "Yesterday's newspaper." },
+                { pat: "〜や (ya)", exp: "Means 'and' for an incomplete list (such as... among others).", ex1jp: "パンや卵を買います。", ex1en: "I buy bread and eggs (among other things).", ex2jp: "机の上に本やペンがあります。", ex2en: "There are books and pens on the desk.", ex3jp: "店で靴や服を見ました。", ex3en: "I saw shoes and clothes at the shop.", ex4jp: "猫や犬が好きです。", ex4en: "I like cats and dogs.", ex5jp: "机や椅子を置きます。", ex5en: "I place desks and chairs." },
+                { pat: "〜から〜まで", exp: "Means 'from (A) to (B)'. Used for time or physical locations.", ex1jp: "月曜日から金曜日まで働きます。", ex1en: "I work from Monday to Friday.", ex2jp: "東京から大阪まで行きます。", ex2en: "I will go from Tokyo to Osaka.", ex3jp: "朝から夜まで勉強しました。", ex3en: "I studied from morning until night.", ex4jp: "一時から二時まで休みます。", ex4en: "I rest from 1 o'clock to 2 o'clock.", ex5jp: "ここからあそこまで走ります。", ex5en: "I run from here to there." },
+                { pat: "ではありません", exp: "Negative of です. Means 'is not' (Formal).", ex1jp: "私は先生ではありません。", ex1en: "I am not a teacher.", ex2jp: "今日は休みじゃありません。", ex2en: "Today is not a day off.", ex3jp: "これは私の本ではありません。", ex3en: "This is not my book.", ex4jp: "日本人ではありません。", ex4en: "I am not Japanese.", ex5jp: "学生ではありません。", ex5en: "I am not a student." },
+                { pat: "あります / います", exp: "Expresses existence. あります (inanimate), います (living).", ex1jp: "机の上に本があります。", ex1en: "There is a book on the desk.", ex2jp: "公園に犬がいます。", ex2en: "There is a dog in the park.", ex3jp: "部屋の中に男の人がいます。", ex3en: "There is a man inside the room.", ex4jp: "時間がありません。", ex4en: "I do not have time.", ex5jp: "友だちがいます。", ex5en: "I have friends." },
+                { pat: "〜ませんか", exp: "Used to politely invite someone to do something.", ex1jp: "一緒に映画を見ませんか。", ex1en: "Won't you watch a movie together?", ex2jp: "お茶を飲みませんか。", ex2en: "Would you like to drink some tea?", ex3jp: "明日、私の家に来ませんか。", ex3en: "Won't you come to my house tomorrow?", ex4jp: "ご飯を食べませんか。", ex4en: "Won't you eat a meal?", ex5jp: "一緒に帰りませんか。", ex5en: "Won't you go home together?" },
+                { pat: "〜ましょう", exp: "Used to suggest doing something together. 'Let's...'", ex1jp: "行きましょう。", ex1en: "Let's go.", ex2jp: "少し休みましょう。", ex2en: "Let's rest a little.", ex3jp: "昼ご飯を食べましょう。", ex3en: "Let's eat lunch.", ex4jp: "帰りましょう。", ex4en: "Let's go home.", ex5jp: "始めましょう。", ex5en: "Let's begin." },
+                { pat: "〜たいです", exp: "Expresses personal desire. 'I want to do...'", ex1jp: "日本へ行きたいです。", ex1en: "I want to go to Japan.", ex2jp: "新しい車を買いたいです。", ex2en: "I want to buy a new car.", ex3jp: "水が飲みたいです。", ex3en: "I want to drink water.", ex4jp: "家族に会いたいです。", ex4en: "I want to meet my family.", ex5jp: "早く帰りたいです。", ex5en: "I want to go home early." },
+                { pat: "〜てください", exp: "Used to make a polite request. 'Please do...'", ex1jp: "ここに名前を書いてください。", ex1en: "Please write your name here.", ex2jp: "少し待ってください。", ex2en: "Please wait a moment.", ex3jp: "ゆっくり話してください。", ex3en: "Please speak slowly.", ex4jp: "見てください。", ex4en: "Please look.", ex5jp: "教えてください。", ex5en: "Please tell me." },
+                { pat: "〜てもいいですか", exp: "Used to ask for permission. 'May I...?'", ex1jp: "写真を撮ってもいいですか。", ex1en: "May I take a picture?", ex2jp: "ここに入ってもいいですか。", ex2en: "May I enter here?", ex3jp: "この本を読んでもいいですか。", ex3en: "May I read this book?", ex4jp: "座ってもいいですか。", ex4en: "May I sit down?", ex5jp: "帰ってもいいですか。", ex5en: "May I go home?" },
+                { pat: "〜てはいけません", exp: "Used to prohibit an action. 'You must not...'", ex1jp: "ここでタバコを吸ってはいけません。", ex1en: "You must not smoke here.", ex2jp: "走ってはいけません。", ex2en: "You must not run.", ex3jp: "写真を撮ってはいけません。", ex3en: "You must not take pictures.", ex4jp: "ここに入ってはいけません。", ex4en: "You must not enter here.", ex5jp: "見てはいけません。", ex5en: "You must not look." },
+                { pat: "〜ている", exp: "Indicates an ongoing action or a state of being.", ex1jp: "今、本を読んでいます。", ex1en: "I am reading a book now.", ex2jp: "私は東京に住んでいます。", ex2en: "I live in Tokyo.", ex3jp: "彼は電話で話しています。", ex3en: "He is talking on the phone.", ex4jp: "兄は結婚しています。", ex4en: "My older brother is married.", ex5jp: "ドアが開いています。", ex5en: "The door is open." },
+                { pat: "〜ないでください", exp: "Used to politely request someone NOT to do something.", ex1jp: "忘れないでください。", ex1en: "Please don't forget.", ex2jp: "入らないでください。", ex2en: "Please do not enter.", ex3jp: "窓を開けないでください。", ex3en: "Please do not open the window.", ex4jp: "見ないでください。", ex4en: "Please do not look.", ex5jp: "心配しないでください。", ex5en: "Please do not worry." },
+                { pat: "〜のが好きです", exp: "Used to express liking an action/activity.", ex1jp: "音楽を聞くのが好きです。", ex1en: "I like listening to music.", ex2jp: "本を読むのが好きです。", ex2en: "I like reading books.", ex3jp: "外を歩くのが好きです。", ex3en: "I like walking outside.", ex4jp: "料理を作るのが好きです。", ex4en: "I like cooking.", ex5jp: "歌うのが好きです。", ex5en: "I like singing." },
+                { pat: "〜のが上手です", exp: "Used to express being good at an action/activity.", ex1jp: "彼女は歌うのが上手です。", ex1en: "She is good at singing.", ex2jp: "彼は絵を描くのが上手です。", ex2en: "He is good at drawing pictures.", ex3jp: "母は料理を作るのが上手です。", ex3en: "My mother is good at cooking.", ex4jp: "英語を話すのが上手です。", ex4en: "Good at speaking English.", ex5jp: "泳ぐのが上手です。", ex5en: "Good at swimming." },
+                { pat: "AはBより〜", exp: "Used for comparison. 'A is more [adj] than B.'", ex1jp: "中国は日本より大きいです。", ex1en: "China is bigger than Japan.", ex2jp: "車は自転車より速いです。", ex2en: "A car is faster than a bicycle.", ex3jp: "今日は昨日より寒いです。", ex3en: "Today is colder than yesterday.", ex4jp: "兄は私より背が高いです。", ex4en: "My older brother is taller than me.", ex5jp: "肉は魚より高いです。", ex5en: "Meat is more expensive than fish." },
+                { pat: "AとBとどちらが〜", exp: "Used to ask 'Which is more... A or B?'", ex1jp: "肉と魚とどちらが好きですか。", ex1en: "Which do you like more, meat or fish?", ex2jp: "英語と日本語とどちらが難しいですか。", ex2en: "Which is harder, English or Japanese?", ex3jp: "電車とバスとどちらが安いですか。", ex3en: "Which is cheaper, train or bus?", ex4jp: "海と山とどちらがいいですか。", ex4en: "Which is better, sea or mountain?", ex5jp: "春と秋とどちらが好きですか。", ex5en: "Which do you prefer, spring or autumn?" },
+                { pat: "〜のほうが〜", exp: "The answer to 'Which is more'.", ex1jp: "肉のほうが好きです。", ex1en: "I like meat more.", ex2jp: "日本語のほうが難しいです。", ex2en: "Japanese is more difficult.", ex3jp: "バスのほうが安いです。", ex3en: "The bus is cheaper.", ex4jp: "山のほうがいいです。", ex4en: "The mountain is better.", ex5jp: "秋のほうが好きです。", ex5en: "I prefer autumn." },
+                { pat: "一番 (ichiban)", exp: "Indicates the superlative. 'The most...'", ex1jp: "これが一番美味しいです。", ex1en: "This is the most delicious.", ex2jp: "彼が一番背が高いです。", ex2en: "He is the tallest.", ex3jp: "日本で一番高い山は富士山です。", ex3en: "The highest mountain in Japan is Mt. Fuji.", ex4jp: "一番安い車を買います。", ex4en: "I will buy the cheapest car.", ex5jp: "誰が一番速いですか。", ex5en: "Who is the fastest?" },
+                { pat: "〜つもりです", exp: "Expresses an intention or plan.", ex1jp: "買い物に行くつもりです。", ex1en: "I plan to go shopping.", ex2jp: "日本で働くつもりです。", ex2en: "I intend to work in Japan.", ex3jp: "大学に入るつもりです。", ex3en: "I intend to enter university.", ex4jp: "明日、休むつもりです。", ex4en: "I plan to rest tomorrow.", ex5jp: "新しい家を買うつもりです。", ex5en: "I intend to buy a new house." },
+                { pat: "〜なる", exp: "Means 'to become'.", ex1jp: "寒くなりました。", ex1en: "It became cold.", ex2jp: "医者になります。", ex2en: "I will become a doctor.", ex3jp: "夜になりました。", ex3en: "It became night.", ex4jp: "安くなりました。", ex4en: "It became cheap.", ex5jp: "きれいになりました。", ex5en: "It became clean/beautiful." },
+                { pat: "〜から (Reason)", exp: "Placed at the end of a clause to mean 'because'.", ex1jp: "忙しいから、行きません。", ex1en: "Because I am busy, I won't go.", ex2jp: "時間がないから、走りましょう。", ex2en: "We have no time, so let's run.", ex3jp: "安いから、買います。", ex3en: "Because it's cheap, I will buy it.", ex4jp: "雨だから、家にいます。", ex4en: "Because it's rain, I stay at home.", ex5jp: "好きだから、毎日食べます。", ex5en: "Because I like it, I eat it every day." },
+                { pat: "どんな (donna)", exp: "Question word meaning 'What kind of...'", ex1jp: "どんな食べ物が好きですか。", ex1en: "What kind of food do you like?", ex2jp: "どんな映画を見ますか。", ex2en: "What kind of movies do you watch?", ex3jp: "どんな本を読みますか。", ex3en: "What kind of books do you read?", ex4jp: "どんな人が好きですか。", ex4en: "What kind of person do you like?", ex5jp: "どんな仕事をしますか。", ex5en: "What kind of work do you do?" },
+                { pat: "どのくらい", exp: "Question word meaning 'How much/long'.", ex1jp: "どのくらい勉強しましたか。", ex1en: "How long did you study?", ex2jp: "どのくらいかかりますか。", ex2en: "How long does it take?", ex3jp: "お金がどのくらいありますか。", ex3en: "How much money do you have?", ex4jp: "どのくらい休みますか。", ex4en: "How long will you rest?", ex5jp: "どのくらい待ちましたか。", ex5en: "How long did you wait?" },
+                { pat: "まだ", exp: "Means 'still' or 'not yet'.", ex1jp: "まだ雨が降っています。", ex1en: "It is still raining.", ex2jp: "まだ終わっていません。", ex2en: "It is not finished yet.", ex3jp: "あの人はまだ来ません。", ex3en: "That person hasn't come yet.", ex4jp: "まだ若いです。", ex4en: "Still young.", ex5jp: "まだ寝ています。", ex5en: "Still sleeping." },
+                { pat: "もう", exp: "Means 'already' or 'not anymore'.", ex1jp: "もう食べました。", ex1en: "I already ate.", ex2jp: "もうお金がありません。", ex2en: "I don't have money anymore.", ex3jp: "もう帰りました。", ex3en: "I already went home.", ex4jp: "もう夜です。", ex4en: "It is already night.", ex5jp: "もう時間がありません。", ex5en: "There is no more time." },
+                { pat: "〜だけ (dake)", exp: "Means 'only' or 'just'. Used with nouns.", ex1jp: "水だけ飲みました。", ex1en: "I drank only water.", ex2jp: "百円だけあります。", ex2en: "I only have 100 yen.", ex3jp: "私だけ行きます。", ex3en: "Only I will go.", ex4jp: "一つだけ買います。", ex4en: "I will buy only one.", ex5jp: "三日だけ休みます。", ex5en: "I rest for only three days." },
+                { pat: "〜しか〜ない", exp: "Means 'only' (used with a negative verb).", ex1jp: "百円しかありません。", ex1en: "I have nothing but 100 yen.", ex2jp: "彼しか知らない。", ex2en: "Only he knows.", ex3jp: "少ししか食べませんでした。", ex3en: "I only ate a little.", ex4jp: "一人しか来ませんでした。", ex4en: "Only one person came.", ex5jp: "これしかありません。", ex5en: "I only have this." },
+                { pat: "〜ごろ (goro)", exp: "Means 'around' (point in time).", ex1jp: "七時ごろ起きます。", ex1en: "I wake up around 7 o'clock.", ex2jp: "十時ごろ来てください。", ex2en: "Please come around 10.", ex3jp: "昼ごろ帰ります。", ex3en: "I will return around noon.", ex4jp: "三時ごろ終わります。", ex4en: "It finishes around 3 o'clock.", ex5jp: "明日ごろ着きます。", ex5en: "It will arrive around tomorrow." },
+                { pat: "〜くらい/ぐらい", exp: "Means 'about' (amount or duration).", ex1jp: "一時間ぐらいかかります。", ex1en: "It takes about 1 hour.", ex2jp: "三十人くらいいます。", ex2en: "There are about 30 people.", ex3jp: "千円くらいです。", ex3en: "It is about 1,000 yen.", ex4jp: "三日ぐらい休みます。", ex4en: "I rest for about 3 days.", ex5jp: "半年ぐらい勉強しました。", ex5en: "I studied for about half a year." },
+                { pat: "〜など (nado)", exp: "Means 'etc.' or 'and so on'.", ex1jp: "犬や猫などがいます。", ex1en: "There are dogs, cats, etc.", ex2jp: "本やノートなどを買いました。", ex2en: "I bought books, notebooks, etc.", ex3jp: "机や椅子などがあります。", ex3en: "There are desks, chairs, etc.", ex4jp: "りんごやみかんなどがあります。", ex4en: "There are apples, oranges, etc.", ex5jp: "新聞や雑誌などを読みます。", ex5en: "I read newspapers, magazines, etc." },
+                { pat: "〜たり〜たりする", exp: "Used to list multiple actions.", ex1jp: "本を読んだり、手紙を書いたりします。", ex1en: "I read books, write letters, etc.", ex2jp: "買い物をしたり、会ったりします。", ex2en: "I shop, meet (people), etc.", ex3jp: "食べたり飲んだりしました。", ex3en: "We ate, drank, etc.", ex4jp: "見たり聞いたりします。", ex4en: "I watch, listen, etc.", ex5jp: "泣いたり笑ったりしました。", ex5en: "We cried, laughed, etc." }
+            ];
+
+            // Validation loop (logs to console if any data is missing)
+            defaultData.forEach((item, i) => {
+                if (!item.ex5en) {
+                    console.warn(`Missing ex5en at index ${i}`, item);
+                }
+            });
+
+            let savedData = localStorage.getItem('jlpt_n5_flashcards_v5ex');
+            let data = savedData ? JSON.parse(savedData) : defaultData;
+            let currentIndex = 0;
+            
+            const card = document.getElementById('card');
+            const patternName = document.getElementById('pattern-name');
+            const explanation = document.getElementById('explanation');
+            
+            const examplesDisplay = document.getElementById('examples-display');
+            const ex1jp = document.getElementById('ex1-jp'), ex1en = document.getElementById('ex1-en');
+            const ex2jp = document.getElementById('ex2-jp'), ex2en = document.getElementById('ex2-en');
+            const ex3jp = document.getElementById('ex3-jp'), ex3en = document.getElementById('ex3-en');
+            const ex4jp = document.getElementById('ex4-jp'), ex4en = document.getElementById('ex4-en');
+            const ex5jp = document.getElementById('ex5-jp'), ex5en = document.getElementById('ex5-en');
+            const progress = document.getElementById('progress');
+            
+            const editFields = document.getElementById('edit-fields');
+            const editEx1Jp = document.getElementById('edit-ex1-jp'), editEx1En = document.getElementById('edit-ex1-en');
+            const editEx2Jp = document.getElementById('edit-ex2-jp'), editEx2En = document.getElementById('edit-ex2-en');
+            const editEx3Jp = document.getElementById('edit-ex3-jp'), editEx3En = document.getElementById('edit-ex3-en');
+            const editEx4Jp = document.getElementById('edit-ex4-jp'), editEx4En = document.getElementById('edit-ex4-en');
+            const editEx5Jp = document.getElementById('edit-ex5-jp'), editEx5En = document.getElementById('edit-ex5-en');
+
+            const btnEdit = document.getElementById('btn-edit');
+            const btnSaveEdit = document.getElementById('btn-save-edit');
+            
+            const modal = document.getElementById('add-modal');
+            const btnAddCard = document.getElementById('btn-add-card');
+            const btnCancelAdd = document.getElementById('btn-cancel-add');
+            const btnConfirmAdd = document.getElementById('btn-confirm-add');
+
+            function saveToStorage() {
+                localStorage.setItem('jlpt_n5_flashcards_v5ex', JSON.stringify(data));
+            }
+
+            function updateCard() {
+                card.classList.remove('is-flipped');
+                
+                examplesDisplay.style.display = 'block';
+                editFields.style.display = 'none';
+                btnEdit.style.display = 'block';
+                btnSaveEdit.style.display = 'none';
+
+                setTimeout(() => {
+                    patternName.textContent = data[currentIndex].pat;
+                    explanation.textContent = data[currentIndex].exp;
+                    
+                    // Implementing the safety fallback || "" to prevent "Loading..." bugs
+                    ex1jp.textContent = data[currentIndex].ex1jp || ""; ex1en.textContent = data[currentIndex].ex1en || "";
+                    ex2jp.textContent = data[currentIndex].ex2jp || ""; ex2en.textContent = data[currentIndex].ex2en || "";
+                    ex3jp.textContent = data[currentIndex].ex3jp || ""; ex3en.textContent = data[currentIndex].ex3en || "";
+                    ex4jp.textContent = data[currentIndex].ex4jp || ""; ex4en.textContent = data[currentIndex].ex4en || "";
+                    ex5jp.textContent = data[currentIndex].ex5jp || ""; ex5en.textContent = data[currentIndex].ex5en || "";
+                    
+                    progress.textContent = `${currentIndex + 1} / ${data.length}`;
+                }, 200); 
+            }
+
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName.toLowerCase() === 'button' || e.target.tagName.toLowerCase() === 'textarea') {
+                    return;
+                }
+                card.classList.toggle('is-flipped');
+            });
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % data.length;
+                updateCard();
+            });
+
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                currentIndex = (currentIndex - 1 + data.length) % data.length;
+                updateCard();
+            });
+
+            btnEdit.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                examplesDisplay.style.display = 'none';
+                editFields.style.display = 'flex';
+                
+                editEx1Jp.value = data[currentIndex].ex1jp || ""; editEx1En.value = data[currentIndex].ex1en || "";
+                editEx2Jp.value = data[currentIndex].ex2jp || ""; editEx2En.value = data[currentIndex].ex2en || "";
+                editEx3Jp.value = data[currentIndex].ex3jp || ""; editEx3En.value = data[currentIndex].ex3en || "";
+                editEx4Jp.value = data[currentIndex].ex4jp || ""; editEx4En.value = data[currentIndex].ex4en || "";
+                editEx5Jp.value = data[currentIndex].ex5jp || ""; editEx5En.value = data[currentIndex].ex5en || "";
+                
+                btnEdit.style.display = 'none';
+                btnSaveEdit.style.display = 'block';
+            });
+
+            btnSaveEdit.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                data[currentIndex].ex1jp = editEx1Jp.value; data[currentIndex].ex1en = editEx1En.value; 
+                data[currentIndex].ex2jp = editEx2Jp.value; data[currentIndex].ex2en = editEx2En.value; 
+                data[currentIndex].ex3jp = editEx3Jp.value; data[currentIndex].ex3en = editEx3En.value; 
+                data[currentIndex].ex4jp = editEx4Jp.value; data[currentIndex].ex4en = editEx4En.value; 
+                data[currentIndex].ex5jp = editEx5Jp.value; data[currentIndex].ex5en = editEx5En.value; 
+                saveToStorage(); 
+                
+                ex1jp.textContent = data[currentIndex].ex1jp; ex1en.textContent = data[currentIndex].ex1en;
+                ex2jp.textContent = data[currentIndex].ex2jp; ex2en.textContent = data[currentIndex].ex2en;
+                ex3jp.textContent = data[currentIndex].ex3jp; ex3en.textContent = data[currentIndex].ex3en;
+                ex4jp.textContent = data[currentIndex].ex4jp; ex4en.textContent = data[currentIndex].ex4en;
+                ex5jp.textContent = data[currentIndex].ex5jp; ex5en.textContent = data[currentIndex].ex5en;
+                
+                examplesDisplay.style.display = 'block';
+                editFields.style.display = 'none';
+                btnEdit.style.display = 'block';
+                btnSaveEdit.style.display = 'none';
+            });
+
+            btnAddCard.addEventListener('click', () => {
+                modal.style.display = 'flex';
+            });
+
+            btnCancelAdd.addEventListener('click', () => {
+                modal.style.display = 'none';
+                document.getElementById('new-pattern').value = '';
+                document.getElementById('new-explanation').value = '';
+                document.getElementById('new-ex1').value = ''; document.getElementById('new-ex2').value = '';
+                document.getElementById('new-ex3').value = ''; document.getElementById('new-ex4').value = '';
+                document.getElementById('new-ex5').value = '';
+            });
+
+            btnConfirmAdd.addEventListener('click', () => {
+                const pat = document.getElementById('new-pattern').value.trim();
+                const exp = document.getElementById('new-explanation').value.trim();
+                const parseEx = (val) => { const split = val.split('-'); return [split[0] ? split[0].trim() : "", split[1] ? split[1].trim() : ""]; };
+                
+                if (pat && exp) {
+                    const ex1 = parseEx(document.getElementById('new-ex1').value.trim());
+                    const ex2 = parseEx(document.getElementById('new-ex2').value.trim());
+                    const ex3 = parseEx(document.getElementById('new-ex3').value.trim());
+                    const ex4 = parseEx(document.getElementById('new-ex4').value.trim());
+                    const ex5 = parseEx(document.getElementById('new-ex5').value.trim());
+
+                    data.push({ 
+                        pat: pat, exp: exp, 
+                        ex1jp: ex1[0], ex1en: ex1[1],
+                        ex2jp: ex2[0], ex2en: ex2[1],
+                        ex3jp: ex3[0], ex3en: ex3[1],
+                        ex4jp: ex4[0], ex4en: ex4[1],
+                        ex5jp: ex5[0], ex5en: ex5[1]
+                    });
+                    
+                    saveToStorage();
+                    currentIndex = data.length - 1;
+                    updateCard();
+                    btnCancelAdd.click();
+                } else {
+                    alert("Please enter at least a Pattern and an Explanation!");
+                }
+            });
+
+            modal.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: true});
+            modal.addEventListener('touchend', (e) => e.stopPropagation(), {passive: true});
+
+            let touchStartX = 0; let touchEndX = 0;
+            const swipeContainer = document.getElementById('swipe-container');
+
+            swipeContainer.addEventListener('touchstart', e => {
+                if(e.target.tagName.toLowerCase() === 'textarea') return;
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            swipeContainer.addEventListener('touchend', e => {
+                if(e.target.tagName.toLowerCase() === 'textarea') return;
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, {passive: true});
+
+            function handleSwipe() {
+                const threshold = 50; 
+                if (touchStartX - touchEndX > threshold) document.getElementById('btn-next').click();
+                if (touchEndX - touchStartX > threshold) document.getElementById('btn-prev').click();
+            }
+
+            updateCard();
+        });
+    </script>
+</body>
+</html>
